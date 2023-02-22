@@ -1,11 +1,5 @@
 package ru.lyaminvalery.supercalc.model
 
-enum class Tokens{
-    NUMBER,
-    OPERATION,
-    BRACE
-}
-
 class ParserException(message: String) : Exception(message)
 
 
@@ -22,7 +16,7 @@ class Parser{
 
     private val _operationStack = ArrayDeque<Operation>()
     private val _numberStack = ArrayDeque<Double>()
-    private var _currentNumberParser = NumberParser()
+    private val _currentNumber = StringBuilder()
     private var _index: Int = 0
 
     private val index: Int
@@ -56,7 +50,7 @@ class Parser{
             return 0.0
         }
         if(_currentState == States.READING_NUMBER){
-            _numberStack.addLast(_currentNumberParser.result())
+            _numberStack.addLast(NumberParser.parseString(_currentNumber.toString()))
         }
         if(_currentState == States.READING_OPERATION){
             _operationStack.removeLast()
@@ -76,8 +70,8 @@ class Parser{
 
     private fun addNumberIfNeeded(): Boolean{
         if(_currentState == States.READING_NUMBER) {
-            _numberStack.addLast(_currentNumberParser.result())
-            _currentNumberParser = NumberParser()
+            _numberStack.addLast(NumberParser.parseString(_currentNumber.toString()))
+            _currentNumber.clear()
             return true
         }
         return false
@@ -94,9 +88,9 @@ class Parser{
             }
 
             if(_currentState != States.CLOSED_BRACE &&
-                _currentNumberParser.isCharAllowed(char, initial=(index==start))){
+                NumberParser.isCharAllowed(char, initial=(index==start))){
                 _currentState = States.READING_NUMBER
-                _currentNumberParser.nextChar(char, initial=(index==start))
+                _currentNumber.append(char)
             }
             else if((_currentState == States.READING_NUMBER ||
                     _currentState == States.CLOSED_BRACE)
