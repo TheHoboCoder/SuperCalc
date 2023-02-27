@@ -12,8 +12,15 @@ abstract class UnaryOperation(val name: Char,
     abstract fun compute(a: Double): Double
 }
 
-abstract class FunctionCalc(val name: String, argsCount: Int){
+abstract class FunctionCalc(val name: String, val argsCount: Int){
     abstract fun compute(args: List<Double>): Double
+
+    fun run(args: List<Double>): Double{
+        if(args.size != argsCount){
+            throw ParserException("$name accepts $argsCount parameters, ${args.size} given")
+        }
+        return compute(args)
+    }
 }
 
 abstract class FunctionScope(val start: Char, val end: Char){

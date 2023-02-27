@@ -3,6 +3,7 @@ package ru.lyaminvalery.supercalc
 import org.junit.Test
 import ru.lyaminvalery.supercalc.model.Parser
 import org.junit.Assert.*
+import ru.lyaminvalery.supercalc.model.ParserException
 import kotlin.math.E
 import kotlin.math.PI
 
@@ -31,13 +32,36 @@ class ParserTest {
     @Test
     fun test_unary(){
         assertEquals(16.0, Parser().parse("6 + √4(3 + 2!)"), 0.00001)
-        //TODO:
-        //assertEquals(2.0, Parser().parse("√(1*2 + 4/2)"), 0.00001)
+        assertEquals(2.0, Parser().parse("√(1*2 + 4/2)"), 0.00001)
+        // TODO: возможно сделать обязательным указание умножения перед скобками
+        // assertEquals(12.0, Parser().parse("2!(5 + 1)"), 0.00001)
+    }
+
+    @Test
+    fun test_invalid_input(){
+        assertThrows(ParserException::class.java){
+            Parser().parse("(5 + 4) + ! - 2")
+        }
     }
 
     @Test
     fun test_constants(){
         assertEquals(E*2 + PI / 2, Parser().parse("E*2 + PI / 2"), 0.00001)
+    }
+
+    @Test
+    fun test_radix(){
+        assertEquals(233.82863, Parser().parse("(#2:101 + 5) * #8:34.5 - √#16:abc"), 0.00001)
+    }
+
+    @Test
+    fun test_commas(){
+        assertEquals(1.0, Parser().parse("(5 + 4), 2-2!, 7 + (5 + 1 / 8), 6, 1"), 0.00001)
+    }
+
+    @Test
+    fun test_functions(){
+        assertEquals(4.79588, Parser().parse("2 * (4.5 + lg(10 + 5 + sqrt(100))) - log(2 ^ 7, √4 + 2 - 2!) "), 0.00001)
     }
 
 

@@ -1,7 +1,5 @@
 package ru.lyaminvalery.supercalc.model
 
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.toUpperCase
 import kotlin.math.*
 
 class ParserException(message: String) : Exception(message)
@@ -104,18 +102,19 @@ class Parser{
                 TokenType.INITIAL, TokenType.BINARY_OPERATION, TokenType.BRACE_OPEN, TokenType.SEPARATOR
                                                 -> return currentToken in defaultList
 
-                TokenType.BRACE_CLOSE -> return currentToken in arrayOf(TokenType.BRACE_CLOSE, TokenType.BINARY_OPERATION)
+                TokenType.BRACE_CLOSE -> return currentToken in arrayOf(TokenType.BRACE_CLOSE, TokenType.BINARY_OPERATION, TokenType.SEPARATOR)
 
                 TokenType.NUMBER_OPERAND, TokenType.IDENTIFIER -> return currentToken in arrayOf(TokenType.BINARY_OPERATION,
                                                                                            TokenType.UNARY_OPERATION,
                                                                                            TokenType.BRACE_OPEN,
-                                                                                           TokenType.BRACE_CLOSE)
+                                                                                           TokenType.BRACE_CLOSE,
+                                                                                            TokenType.SEPARATOR)
                 TokenType.UNARY_OPERATION  -> return currentToken in defaultList ||
-                                                     currentToken in arrayOf(TokenType.BINARY_OPERATION, TokenType.BRACE_CLOSE)
+                                                     currentToken in arrayOf(TokenType.BINARY_OPERATION, TokenType.BRACE_CLOSE, TokenType.SEPARATOR)
 
                 TokenType.RADIX_SPECIFICATION_START -> return currentToken == TokenType.NUMBER_RADIX
 
-                TokenType.NUMBER_RADIX -> return currentToken == TokenType.RADIX_SPECIFICATION_END
+                TokenType.NUMBER_RADIX -> return currentToken in arrayOf(TokenType.RADIX_SPECIFICATION_END, TokenType.NUMBER_RADIX)
 
                 TokenType.RADIX_SPECIFICATION_END -> return currentToken == TokenType.NUMBER_OPERAND
 
@@ -126,6 +125,7 @@ class Parser{
        fun getTokenForChar(char: Char, previousToken: TokenType, radix: Int = 10): TokenType{
 
             if(previousToken != TokenType.RADIX_SPECIFICATION_START &&
+                previousToken != TokenType.NUMBER_RADIX &&
                 NumberParser.isCharAllowed(char,
                     separator = '.',
                     initial=(previousToken==TokenType.INITIAL),
@@ -169,6 +169,7 @@ class Parser{
 
     private var previousTokenType: TokenType = TokenType.INITIAL
     private var _unaryOperation: UnaryOperation? = null
+    private var _function: FunctionCalc? = null
     private var _radix: Int = 10
 
     private val _tokenList = mutableListOf<Token>()
@@ -182,6 +183,9 @@ class Parser{
 
     private fun collapse(){
         while (_operationStack.size != 0) {
+            if(_numberStack.size < 2){
+                throw ParserException("invalid input")
+            }
             val prev = _operationStack.removeLast()
             val b = _numberStack.removeLast()
             val a = _numberStack.removeLast()
@@ -189,18 +193,18 @@ class Parser{
         }
     }
 
-    private fun collapseResult(): Double{
+    private fun collapseResult(): List<Double>{
         if (_numberStack.size == 0){
-            return 0.0
+            return listOf(0.0)
         }
         if(previousTokenType == TokenType.NUMBER_OPERAND){
             parseNumber()
         }
-//        if(_unaryOperation != null){
-//            _numberStack.addLast(_unaryOperation!!.compute(_numberStack.removeLast()))
-//        }
+        if(_unaryOperation != null){
+            _numberStack.addLast(_unaryOperation!!.compute(_numberStack.removeLast()))
+        }
         collapse()
-        return _numberStack.last()
+        return _numberStack
 
     }
 
@@ -225,8 +229,11 @@ class Parser{
         val number = NumberParser.parseString(_stringBuffer.toString(),
             radix=_radix, separator='.')
 
+        _radix = 10
+
         if(_unaryOperation != null){
             _numberStack.addLast(_unaryOperation!!.compute(number))
+            _unaryOperation = null
         }
         else{
             _numberStack.addLast(number)
@@ -240,7 +247,7 @@ class Parser{
                 parseNumber()
             }
 
-            TokenType.RADIX_SPECIFICATION_END -> {
+            TokenType.NUMBER_RADIX -> {
                 _radix = NumberParser.parseString(_stringBuffer.toString(), int=true, unsigned=true).toInt()
             }
 
@@ -253,9 +260,11 @@ class Parser{
             }
 
             TokenType.IDENTIFIER -> {
-                if(_stringBuffer.toString().toUpperCase(Locale.current) in CONSTANTS){
-                    _numberStack.addLast(CONSTANTS[_stringBuffer.toString().toUpperCase(Locale.current)]!!)
-                    // TODO: functions
+                if(_stringBuffer.toString().uppercase() in CONSTANTS){
+                    _numberStack.addLast(CONSTANTS[_stringBuffer.toString().uppercase()]!!)
+                }
+                if(_stringBuffer.toString().lowercase() in FUNCTIONS){
+                    _function = FUNCTIONS[_stringBuffer.toString().lowercase()]
                 }
             }
 
@@ -263,9 +272,7 @@ class Parser{
         }
     }
 
-
-    fun parse(input: String, start: Int = 0): Double{
-
+    private fun parseRes(input: String, start: Int = 0): List<Double>{
         _index = start
         previousTokenType = TokenType.INITIAL
         while(_index < input.length){
@@ -283,26 +290,42 @@ class Parser{
                 }
                 evaluateToken(previousTokenType)
                 _stringBuffer.clear()
-                _tokenList.add(Token(tokenType, index, index))
+                if(_function != null && tokenType != TokenType.BRACE_OPEN){
+                    throw ParserException("function must be called with braces")
+                }
+                _tokenList.add(Token(tokenType, index, index ))
             }
+            // _tokenList.last().end ++
             _stringBuffer.append(char)
 
             if(tokenType == TokenType.BRACE_OPEN){
-                if(previousTokenType == TokenType.NUMBER_OPERAND ||
-                    (previousTokenType == TokenType.UNARY_OPERATION && !_unaryOperation!!.prefix)){
+                if(previousTokenType == TokenType.NUMBER_OPERAND /* ||
+                    (previousTokenType == TokenType.UNARY_OPERATION && !_unaryOperation!!.prefix)*/){
                     _operationStack.add(BINARY_OPERATIONS['*']!!)
                 }
 
                 val parser = Parser()
-                _numberStack.addLast(parser.parse(input, _index + 1))
+                if(_function == null){
+                    _numberStack.addLast(parser.parse(input, _index + 1))
+                }
+                else{
+                    _numberStack.addLast(_function!!.run(parser.parseRes(input, _index + 1)))
+                    _function = null
+                }
+
                 _index = parser.index + 1
                 previousTokenType = TokenType.BRACE_CLOSE
                 continue
             }
 
+
             previousTokenType = tokenType
             if(tokenType == TokenType.BRACE_CLOSE){
                 return collapseResult()
+            }
+            if(tokenType == TokenType.SEPARATOR){
+                collapseResult()
+                previousTokenType = TokenType.INITIAL
             }
 
             _index++
@@ -310,6 +333,11 @@ class Parser{
 
 
         return collapseResult()
+    }
+
+
+    fun parse(input: String, start: Int = 0): Double{
+        return parseRes(input, start).last()
     }
 
 }
