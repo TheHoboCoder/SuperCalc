@@ -31,6 +31,14 @@ class Parser{
                 override fun compute(a: Double, b: Double): Double = a.pow(b)
             },
 
+            object: BinaryOperation('>', 0){
+                override fun compute(a: Double, b: Double): Double = if(a > b) 1.0 else 0.0
+            },
+
+            object: BinaryOperation('<', 0){
+                override fun compute(a: Double, b: Double): Double = if(a < b) 1.0 else 0.0
+            },
+
         ).associateBy { it.name }
 
 
