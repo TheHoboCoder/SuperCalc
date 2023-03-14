@@ -4,16 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalTextInputService
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -33,7 +40,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SuperCalcTheme {
-                MainStack()
+                Scaffold(
+                    topBar = {
+                        TopAppBar {
+                            IconButton(onClick = { }) {Icon(Icons.Filled.Menu,
+                                contentDescription = getString(R.string.menu)) }
+                            Text(getString(R.string.app_name), fontSize = 22.sp)
+                        }
+                    }
+                ) {
+                        padding -> MainStack(padding)
+                }
             }
         }
     }
@@ -43,13 +60,13 @@ class MainActivity : ComponentActivity() {
                 inputText: String,
                 outputText: String,
                 hasError: Boolean,
-                viewModel: CalcViewModel){
+                textPosition: Int,
+                setTextPosition: (Int) -> Unit){
         Column(modifier=modifier){
             CompositionLocalProvider(
                 LocalTextInputService provides null
             ){
 
-                //val textState = remember { mutableStateOf(TextFieldValue(inputText)) }
                 TextField(
                     modifier = Modifier
                         .padding(all = 8.dp)
@@ -57,17 +74,16 @@ class MainActivity : ComponentActivity() {
                         .weight(2f),
 
                     textStyle = TextStyle(fontSize=30.sp, textAlign = TextAlign.End),
-                    value = TextFieldValue(inputText),
+                    value = TextFieldValue(inputText, TextRange(textPosition)),
                     onValueChange = {
-                        viewModel.currentPos = it.selection.start
-                        //textState.value = it
+                        setTextPosition(it.selection.start)
                     })
             }
 
             Text(outputText,
                 fontSize = 20.sp,
                 textAlign = TextAlign.End,
-                color = if (!hasError) Color.Black else Color.Red,
+                color = if (!hasError) MaterialTheme.colors.onPrimary else MaterialTheme.colors.onError,
                 modifier = Modifier
                     .padding(all = 8.dp)
                     .fillMaxSize()
@@ -76,49 +92,67 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ControlPane(modifier: Modifier,  viewModel: CalcViewModel){
+    fun ControlPane(modifier: Modifier,
+                    setText: (String) -> Unit,
+                    clear: () -> Unit,
+                    backspace: () -> Unit,
+                    changeMode: () -> Unit){
 
         Row(modifier = modifier) {
             Button(
-                onClick = { viewModel.setText("(") },
+                onClick = { setText("(") },
                 modifier = Modifier
                     .padding(all = 8.dp)
                     .fillMaxWidth()
                     .weight(1f)
-                    .aspectRatio(1f),
+                    .fillMaxHeight(),
             ) {
                 Text("(", fontWeight = FontWeight.Bold)
             }
 
             Button(
-                onClick = { viewModel.setText(")") },
+                onClick = { setText(")") },
                 modifier = Modifier
                     .padding(all = 8.dp)
                     .fillMaxWidth()
                     .weight(1f)
-                    .aspectRatio(1f),
+                    .fillMaxHeight(),
             ) {
                 Text(")", fontWeight = FontWeight.Bold)
             }
 
             Button(
-                onClick = { viewModel.clear() },
+                onClick = changeMode,
                 modifier = Modifier
                     .padding(all = 8.dp)
                     .fillMaxWidth()
                     .weight(1f)
-                    .aspectRatio(1f),
+                    .fillMaxHeight(),
+                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
+            ) {
+                Text("...", fontWeight = FontWeight.Bold)
+            }
+
+            Button(
+                onClick = clear,
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .fillMaxHeight(),
+                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
             ) {
                 Text("C", fontWeight = FontWeight.Bold)
             }
 
             Button(
-                onClick = { viewModel.backspace() },
+                onClick = backspace,
                 modifier = Modifier
                     .padding(all = 8.dp)
                     .fillMaxWidth()
                     .weight(1f)
-                    .aspectRatio(1f),
+                    .fillMaxHeight(),
+                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
             ) {
                 Icon(Icons.Sharp.Delete, contentDescription = "TODO")
             }
@@ -126,51 +160,52 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun Numpad(modifier: Modifier,  viewModel: CalcViewModel){
+    fun Numpad(modifier: Modifier,
+               charset: List<Char>,
+               setText: (String) -> Unit){
+
         Column(modifier=modifier) {
-            val rows = arrayOf(('7'..'9').toList(),
-                                ('4'..'6').toList(),
-                                ('1'..'3').toList(),
-                                listOf('#', '0', '.'))
+            val rows = charset.chunked(3)
+                              .toMutableList()
+                              .apply {
+                                   add(0, listOf(',', '0', '.'))
+                                   reverse()
+                              }
+
             for(row in rows){
                 Row(modifier = Modifier
                     .fillMaxHeight()
                     .weight(1f)) {
 
                     for(label in row){
-                        Button(onClick = {
-                                if (label != '#'){
-                                    viewModel.setText(label.toString())
-                                }
-                                else{
-                                    viewModel.changeMode()
-                                }
-                             },
+                        Button(onClick = {setText(label.toString())},
                             modifier = Modifier
                                 .padding(all = 8.dp)
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .fillMaxHeight(),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = textBtnColor)) {
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)) {
                             Text(label.toString(), color = Color.White)
                         }
                     }
                 }
             }
-
         }
     }
 
     @Composable
     fun OperationPane(modifier: Modifier,
                       operationList: List<List<String>>,
-                      viewModel: CalcViewModel){
+                      setText: (String) -> Unit){
         Column(modifier) {
             for (row in operationList){
-                Row(Modifier.fillMaxHeight().weight(1f)){
+                Row(
+                    Modifier
+                        .fillMaxHeight()
+                        .weight(1f)){
                     for(operation in row){
-                        Button(onClick = {  viewModel.setText(operation) },
-                            modifier= Modifier
+                        Button(onClick = {  setText(operation) },
+                            modifier = Modifier
                                 .padding(all = 8.dp)
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -186,15 +221,15 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun AdditionalPane(modifier: Modifier,
                        operationList: List<String>,
-                       viewModel: CalcViewModel){
-        Row(modifier){
+                       setText: (String) -> Unit){
+        val buttonsize = LocalConfiguration.current.screenWidthDp / 5
+        Row(modifier.horizontalScroll(rememberScrollState())){
             for(operation in operationList){
-                Button(onClick = {  viewModel.setText(operation) },
+                Button(onClick = {  setText(operation) },
                     modifier= Modifier
                         .padding(all = 8.dp)
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .aspectRatio(1f)) {
+                        .width(buttonsize.dp)
+                        .fillMaxHeight()) {
                     Text(operation, fontWeight = FontWeight.Bold)
                 }
             }
@@ -202,14 +237,17 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun MainStack(){
+    fun MainStack(padding: PaddingValues){
+
         Column(modifier= Modifier
-            .padding(all = 8.dp)
+            .padding(padding)
             .fillMaxSize()) {
 
             val inputVal = remember { viewModel.inputText}
             val outputVal = remember { viewModel.outputText}
+            val inputPosition = remember { viewModel.currentPos}
             val isFailed = remember { viewModel.isFailed}
+            val charset = remember {viewModel.charset }
 
             TopPane(modifier = Modifier
                 .fillMaxHeight()
@@ -217,61 +255,74 @@ class MainActivity : ComponentActivity() {
                     inputText = inputVal.value,
                     outputText = outputVal.value,
                     hasError = isFailed.value,
-                    viewModel = viewModel)
-
-            ControlPane(modifier = Modifier.fillMaxWidth(), viewModel = viewModel)
+                    textPosition = inputPosition.value,
+                    setTextPosition = viewModel::setInputPosition)
 
             val addOperationList = remember { viewModel.addOperationList}
 
             if(addOperationList.value.isNotEmpty()){
-                AdditionalPane(modifier = Modifier.fillMaxWidth(),
+                AdditionalPane(modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f),
                     operationList = addOperationList.value,
-                    viewModel = viewModel)
+                    viewModel::setText)
             }
 
-            Row(modifier = Modifier
+            ControlPane(modifier = Modifier
                 .fillMaxHeight()
-                .weight(3f)){
+                .weight(1f),
+                viewModel::setText,
+                viewModel::clear,
+                viewModel::backspace,
+                viewModel::changeMode)
 
-                Numpad(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(3f), viewModel = viewModel)
 
-                Column(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(2f)){
+            Box(modifier = Modifier
+                .fillMaxHeight()
+                .weight(4f)){
 
-                    OperationPane(modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(3f),
-                        viewModel = viewModel,
-                        operationList = listOf(listOf("^", "√"), listOf("*", "/"), listOf("+", "-"))
-                    )
+                Row(modifier = Modifier
+                    .fillMaxHeight()){
 
-                    Button(onClick = {  viewModel.compute() },
+                    Numpad(modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(3f), charset.value, viewModel::setText)
+
+                    Column(modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(2f)){
+
+                        OperationPane(modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(3f),
+                            setText = viewModel::setText,
+                            operationList = listOf(listOf("^", "√"), listOf("*", "/"), listOf("+", "-"))
+                        )
+
+                        Button(onClick = {  viewModel.compute() },
                             modifier= Modifier
                                 .padding(all = 8.dp)
                                 .fillMaxWidth()
                                 .fillMaxHeight()
-                                .weight(1f)) {
+                                .weight(1f),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primaryVariant)
+                        ) {
                             Text("=", fontWeight = FontWeight.Bold)
                         }
 
+                    }
+
                 }
 
+//                if(addOperationList.value.isNotEmpty()) Box(modifier = Modifier.fillMaxWidth().height(200.dp).background(
+//                    Color.Magenta))
             }
+
+
 
 
         }
     }
-
-
-    @Preview
-    @Composable
-    fun Preview(){
-        MainStack()
-    }
-
 }
 
 

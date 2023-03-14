@@ -3,6 +3,7 @@ package ru.lyaminvalery.supercalc
 import org.junit.Test
 import ru.lyaminvalery.supercalc.model.Parser
 import org.junit.Assert.*
+import ru.lyaminvalery.supercalc.model.NumberParser
 import ru.lyaminvalery.supercalc.model.ParserException
 import kotlin.math.E
 import kotlin.math.PI
@@ -10,9 +11,24 @@ import kotlin.math.PI
 class ParserTest {
 
     @Test
+    fun simple_input(){
+        assertEquals(2.0, Parser().parse("2"), 0.00001)
+        assertEquals(2.0, Parser().parse("√4"), 0.00001)
+    }
+
+    @Test
+    fun test_throws(){
+        assertThrows(ParserException::class.java){
+            Parser().parse("2+*-3")
+        }
+    }
+
+
+    @Test
     fun simple_parsing(){
         assertEquals(3.0, Parser().parse("2 + 2 / 2"), 0.00001)
         assertEquals(20.65, Parser().parse("10.5 + 4.5 * 2.7 - 2 + "), 0.00001)
+        //assertEquals(69.0, Parser().parse("65+2√4"), 0.00001)
 
     }
 

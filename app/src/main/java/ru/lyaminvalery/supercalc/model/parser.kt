@@ -9,81 +9,11 @@ class Parser{
 
     companion object {
 
-        val BINARY_OPERATIONS = arrayOf<BinaryOperation>(
-
-            object: BinaryOperation('+', 0){
-                override fun compute(a: Double, b: Double): Double = a + b
-            },
-
-            object: BinaryOperation('-', 0){
-                override fun compute(a: Double, b: Double): Double = a - b
-            },
-
-            object: BinaryOperation('*', 1){
-                override fun compute(a: Double, b: Double): Double = a * b
-            },
-
-            object: BinaryOperation('/', 1){
-                override fun compute(a: Double, b: Double): Double = a / b
-            },
-
-            object: BinaryOperation('^', 2){
-                override fun compute(a: Double, b: Double): Double = a.pow(b)
-            },
-
-            object: BinaryOperation('>', 0){
-                override fun compute(a: Double, b: Double): Double = if(a > b) 1.0 else 0.0
-            },
-
-            object: BinaryOperation('<', 0){
-                override fun compute(a: Double, b: Double): Double = if(a < b) 1.0 else 0.0
-            },
-
-        ).associateBy { it.name }
 
 
-        val UNARY_OPERATIONS = arrayOf<UnaryOperation>(
-
-            object: UnaryOperation('√', prefix = true){
-                override fun compute(a: Double): Double = sqrt(a)
-            },
-
-            object: UnaryOperation('!'){
-                override fun compute(a: Double): Double {
-                    val eps = 0.00000000001
-                    if(a < 0.0 || a - floor(a) > eps)
-                        throw IllegalArgumentException("$a cannot be factorized!")
-                    return if (a < eps) 1.0 else (1..a.toLong()).reduce{ x, y -> x*y }.toDouble()
-                }
-            }
-
-        ).associateBy { it.name }
-
-        val FUNCTIONS = arrayOf<FunctionCalc>(
-
-            object: FunctionCalc("sqrt", 1){
-                override fun compute(args: List<Double>): Double = sqrt(args[0])
-            },
-
-            object: FunctionCalc("ln", 1){
-                override fun compute(args: List<Double>): Double = ln(args[0])
-            },
-
-            object: FunctionCalc("lg", 1){
-                override fun compute(args: List<Double>): Double = log10(args[0])
-            },
-
-            object: FunctionCalc("log", 2){
-                override fun compute(args: List<Double>): Double = log(args[0], args[1])
-            },
-
-            ).associateBy { it.name }
 
 
-        val CONSTANTS = mapOf<String, Double>(
-            "E" to E,
-            "PI" to PI
-        )
+
 
         enum class TokenType{
             INITIAL,
@@ -202,14 +132,15 @@ class Parser{
     }
 
     private fun collapseResult(): List<Double>{
-        if (_numberStack.size == 0){
-            return listOf(0.0)
-        }
+
         if(previousTokenType == TokenType.NUMBER_OPERAND){
             parseNumber()
         }
         if(_unaryOperation != null){
             _numberStack.addLast(_unaryOperation!!.compute(_numberStack.removeLast()))
+        }
+        if (_numberStack.size == 0){
+            return listOf(0.0)
         }
         collapse()
         return _numberStack
@@ -292,7 +223,8 @@ class Parser{
             }
 
             val tokenType = getTokenForChar(char, previousTokenType, _radix)
-            if(tokenType != previousTokenType){
+            if(tokenType !in listOf(TokenType.NUMBER_OPERAND, TokenType.NUMBER_RADIX, TokenType.IDENTIFIER)
+                || tokenType != previousTokenType){
                 if(!isAllowed(previousTokenType, tokenType)){
                     throw ParserException("$_index: $char is not allowed here")
                 }
@@ -305,6 +237,11 @@ class Parser{
             }
             // _tokenList.last().end ++
             _stringBuffer.append(char)
+
+            // TODO:
+//            if(tokenType == TokenType.UNARY_OPERATION && previousTokenType == TokenType.NUMBER_OPERAND){
+//                _operationStack.add(BINARY_OPERATIONS['*']!!)
+//            }
 
             if(tokenType == TokenType.BRACE_OPEN){
                 if(previousTokenType == TokenType.NUMBER_OPERAND /* ||

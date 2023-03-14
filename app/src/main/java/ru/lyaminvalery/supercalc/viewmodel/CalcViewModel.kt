@@ -7,15 +7,33 @@ import ru.lyaminvalery.supercalc.model.ParserException
 
 class CalcViewModel: ViewModel() {
 
-    private var _inputText = mutableStateOf<String>("")
-    private var _outputText = mutableStateOf<String>("")
-    private var _failed = mutableStateOf<Boolean>(false)
-    // TODO:
-    private var _stateNum = 0
-    private var _addOperationList = mutableStateOf<List<String>>(value = listOf())
+    private enum class Mode {
+        PLAIN,
+        SCIENTIFIC,
+        PROGRAMMER
+    }
 
-    var currentPos = 0
+    private var _currentMode: Mode = Mode.PLAIN
+
+    private val _inputText = mutableStateOf<String>("")
+    private val _outputText = mutableStateOf<String>("")
+    private val _failed = mutableStateOf<Boolean>(false)
+
+    private val _addOperationList = mutableStateOf<List<String>>(value = listOf())
+
+    private val DEFAULT_CHARSET = ('1'..'9').toList()
+    private val PROGRAMMER_CHARSET = DEFAULT_CHARSET.toMutableList()
+                                                    .apply{
+                                                        addAll(('A' .. 'F'))
+                                                    }.toList()
+
+    private val _charset = mutableStateOf<List<Char>>(value = DEFAULT_CHARSET)
+
+    private val _currentPos = mutableStateOf<Int>(0)
     private var buffer: StringBuilder = StringBuilder()
+
+    val currentPos
+        get() = _currentPos
 
     val inputText
         get() = _inputText
@@ -29,36 +47,50 @@ class CalcViewModel: ViewModel() {
     val addOperationList
         get() = _addOperationList
 
+    val charset
+        get() = _charset
+
 
     fun setText(text: String){
-        buffer.insert(currentPos, text)
-        currentPos += text.length
+        buffer.insert(_currentPos.value, text)
+        _currentPos.value += text.length
         _inputText.value = buffer.toString()
     }
 
+    fun setInputPosition(position: Int){
+        _currentPos.value = position
+    }
+
     fun changeMode(){
-        _stateNum++
-        if (_stateNum > 2){
-            _stateNum = 0
-        }
-        when(_stateNum){
-            0 -> _addOperationList.value = listOf()
-            1 -> _addOperationList.value = listOf(",", "ln()", "log()", "PI", "E")
-            2 -> _addOperationList.value = listOf("#2:", "#8:", ">", "<")
+        val values = Mode.values()
+        _currentMode = values[(_currentMode.ordinal + 1) % values.size]
+        when(_currentMode){
+            Mode.PLAIN -> {
+                _addOperationList.value = listOf()
+                charset.value = DEFAULT_CHARSET
+            }
+            Mode.SCIENTIFIC -> {
+                _addOperationList.value = listOf("ln", "log", "PI", "E", "sin", "cos", "tg", "ctg", "rad", "degrees", "min", "max")
+                charset.value = DEFAULT_CHARSET
+            }
+            Mode.PROGRAMMER -> {
+                _addOperationList.value = listOf("#2:", "#8:", "#16:", ">", "<", "=", "&", "|", "if")
+                charset.value = PROGRAMMER_CHARSET
+            }
         }
     }
 
     fun backspace(){
-        if (currentPos == 0)
+        if (_currentPos.value == 0)
             return
-        buffer.deleteCharAt(currentPos - 1)
-        currentPos--
+        buffer.deleteCharAt(_currentPos.value - 1)
+        _currentPos.value--
         _inputText.value = buffer.toString()
     }
 
     fun clear(){
         buffer.clear()
-        currentPos = 0
+        _currentPos.value = 0
         _inputText.value = ""
         _outputText.value = ""
         _failed.value = false
