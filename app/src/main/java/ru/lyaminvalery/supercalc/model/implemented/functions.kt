@@ -1,5 +1,6 @@
-package ru.lyaminvalery.supercalc.model
+package ru.lyaminvalery.supercalc.model.implemented
 
+import ru.lyaminvalery.supercalc.model.FunctionCalc
 import kotlin.math.*
 
 val FUNCTIONS = arrayOf<FunctionCalc>(

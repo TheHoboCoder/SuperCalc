@@ -1,4 +1,4 @@
-package ru.lyaminvalery.supercalc.model
+package ru.lyaminvalery.supercalc.model.implemented
 
 import kotlin.math.E
 import kotlin.math.PI

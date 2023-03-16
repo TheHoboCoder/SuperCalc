@@ -1,4 +1,7 @@
 <resources>
-    <string name="app_name">SuperCalc</string>
+    <string name="app_name" translatable="false">SuperCalc</string>
     <string name="menu">Меню</string>
+    <string name="mode_plain">Обычный</string>
+    <string name="mode_scientific">Научный</string>
+    <string name="mode_programmer">Программист</string>
 </resources>

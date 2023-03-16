@@ -1,5 +1,6 @@
-package ru.lyaminvalery.supercalc.model
+package ru.lyaminvalery.supercalc.model.implemented
 
+import ru.lyaminvalery.supercalc.model.UnaryOperation
 import kotlin.math.floor
 import kotlin.math.sqrt
 

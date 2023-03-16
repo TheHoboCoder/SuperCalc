@@ -1,6 +1,9 @@
 package ru.lyaminvalery.supercalc.model
 
-import kotlin.math.*
+import ru.lyaminvalery.supercalc.model.implemented.BINARY_OPERATIONS
+import ru.lyaminvalery.supercalc.model.implemented.CONSTANTS
+import ru.lyaminvalery.supercalc.model.implemented.FUNCTIONS
+import ru.lyaminvalery.supercalc.model.implemented.UNARY_OPERATIONS
 
 class ParserException(message: String) : Exception(message)
 
@@ -8,11 +11,6 @@ class ParserException(message: String) : Exception(message)
 class Parser{
 
     companion object {
-
-
-
-
-
 
 
         enum class TokenType{

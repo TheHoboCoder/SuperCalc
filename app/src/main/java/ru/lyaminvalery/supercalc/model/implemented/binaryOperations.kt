@@ -1,5 +1,6 @@
-package ru.lyaminvalery.supercalc.model
+package ru.lyaminvalery.supercalc.model.implemented
 
+import ru.lyaminvalery.supercalc.model.BinaryOperation
 import kotlin.math.abs
 import kotlin.math.pow
 
