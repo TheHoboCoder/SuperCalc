@@ -31,7 +31,9 @@ fun Numpad(modifier: Modifier,
                 .fillMaxHeight()
                 .weight(1f),
                 states = row,
-                allowedTokens = allowedTokens, MaterialTheme.colors.secondary, Color.White
+                allowedTokens = allowedTokens,
+                buttonColor = MaterialTheme.colors.secondary,
+                textColor = Color.White
             )
         }
     }

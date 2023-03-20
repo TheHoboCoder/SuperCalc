@@ -3,4 +3,15 @@
     <string name="mode_programmer">Programmer</string>
     <string name="mode_plain">Plain</string>
     <string name="mode_scientific">Scientific</string>
+    <string name="about">About</string>
+    <string name="settings_btn_text">Settings</string>
+    <string name="app_description_header">App description</string>
+    <string name="dev_description_header">Development</string>
+    <string name="dev_description">Valery Lyamin, Murmansk Arctic State University, 2023</string>
+    <string name="masu_logo_desc">Logo of Murmansk Arctic State University</string>
+    <string name="settings_text">Settings</string>
+    <string name="theme_warm">Warm theme</string>
+    <string name="theme_cold">Cold theme</string>
+    <string name="theme_select">Theme select</string>
+    <!--    <string name="about_text">SuperCalc is calculator which supports three modes ...</string>-->
 </resources>

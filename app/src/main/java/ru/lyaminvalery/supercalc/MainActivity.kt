@@ -1,59 +1,79 @@
 package ru.lyaminvalery.supercalc
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.lyaminvalery.supercalc.ui.ButtonColumn
-import ru.lyaminvalery.supercalc.ui.ButtonRow
-import ru.lyaminvalery.supercalc.ui.Numpad
-import ru.lyaminvalery.supercalc.ui.TopPane
-import ru.lyaminvalery.supercalc.ui.theme.SuperCalcTheme
+import ru.lyaminvalery.supercalc.ui.*
 import ru.lyaminvalery.supercalc.viewmodel.CalcViewModel
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: CalcViewModel by viewModels()
+    // TODO(create shared preferences wrapper)
+    private val currentThemeId = mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SuperCalcTheme {
-                Scaffold(
-                    topBar = {
-                        TopAppBar {
-                            IconButton(onClick = { }) {Icon(Icons.Filled.Menu,
-                                contentDescription = getString(R.string.menu)) }
-                            Text(getString(R.string.app_name), fontSize = 22.sp)
-                        }
+            val context = LocalContext.current
+            val themeId = remember {
+                currentThemeId
+            }
+            AppScaffold(
+                themeId = themeId.value,
+                startAboutActivity = { startActivity(Intent(context, AboutActivity::class.java)) },
+                startSettingsActivity = { startActivity(Intent(context, SettingsActivity::class.java)) },
+                captionText = stringResource(id = R.string.app_name)) {
+                    padding -> MainStack(padding)
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val preferences = getSharedPreferences(getString(R.string.shared_preferences), MODE_PRIVATE)
+        currentThemeId.value = preferences.getInt(getString(R.string.theme_id_key), 0)
+    }
+
+    @Composable
+    fun ModeSwitcher(
+        modeIds: List<Int>,
+        changeMode: (Int) -> Unit){
+        val tabIndex = remember { mutableStateOf(0) }
+
+        TabRow(selectedTabIndex = tabIndex.value){
+            modeIds.forEachIndexed {
+                index, value ->
+                Tab(modifier = Modifier.padding(8.dp),
+                    selected = tabIndex.value == index,
+                    onClick = {
+                        tabIndex.value = index
+                        changeMode(index)
                     }
-                ) {
-                        padding -> MainStack(padding)
+                ){
+                    Text(getString(value))
                 }
             }
         }
+
     }
 
 
     @Composable
     fun MainStack(padding: PaddingValues){
 
-        Column(modifier= Modifier
+        Column(modifier = Modifier
             .padding(padding)
             .fillMaxSize()) {
 
@@ -68,38 +88,17 @@ class MainActivity : ComponentActivity() {
             val secondaryColumn = remember { viewModel.secondaryColumn }
             val mainRow = remember { viewModel.primaryRow }
             val additionalRows = remember { viewModel.additionalRows }
-            val currentMode = remember { viewModel.currentMode }
 
-            Row(
-                Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(8.dp)){
 
-                ClickableText(modifier = Modifier.padding(end=8.dp),
-                    text = AnnotatedString(getString(R.string.mode_plain)),
-                    style = if(currentMode.value == CalcViewModel.Mode.PLAIN)
-                        TextStyle(MaterialTheme.colors.onPrimary, fontWeight = FontWeight.Bold)
-                            else TextStyle(MaterialTheme.colors.onPrimary, fontWeight = FontWeight.Normal),
-                    onClick = { viewModel.changeMode(CalcViewModel.Mode.PLAIN) })
+            ModeSwitcher(
+                modeIds = listOf(R.string.mode_plain, R.string.mode_scientific, R.string.mode_programmer),
+                changeMode = { viewModel.changeMode(CalcViewModel.Mode.values()[it])})
 
-                ClickableText(modifier = Modifier.padding(end=8.dp),
-                    text = AnnotatedString(getString(R.string.mode_scientific)),
-                    style = if(currentMode.value == CalcViewModel.Mode.PLAIN)
-                        TextStyle(MaterialTheme.colors.onPrimary, fontWeight = FontWeight.Bold)
-                    else TextStyle(MaterialTheme.colors.onPrimary, fontWeight = FontWeight.Normal),
-                    onClick = { viewModel.changeMode(CalcViewModel.Mode.SCIENTIFIC) })
 
-                ClickableText(modifier = Modifier.padding(end=8.dp),
-                    text = AnnotatedString(getString(R.string.mode_programmer)),
-                    style = if(currentMode.value == CalcViewModel.Mode.PLAIN)
-                        TextStyle(MaterialTheme.colors.onPrimary, fontWeight = FontWeight.Bold)
-                    else TextStyle(MaterialTheme.colors.onPrimary, fontWeight = FontWeight.Normal),
-                    onClick = { viewModel.changeMode(CalcViewModel.Mode.PROGRAMMER) })
-            }
-
+            val topPaneWeight = if(viewModel.currentMode.value != CalcViewModel.Mode.PLAIN) 3f else 2f
             TopPane(modifier = Modifier
                 .fillMaxHeight()
-                .weight(2f),
+                .weight(topPaneWeight),
                     inputText = inputVal.value,
                     outputText = outputVal.value,
                     hasError = isFailed.value,
