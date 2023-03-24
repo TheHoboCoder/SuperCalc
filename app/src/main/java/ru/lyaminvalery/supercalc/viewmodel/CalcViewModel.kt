@@ -3,6 +3,8 @@ package ru.lyaminvalery.supercalc.viewmodel
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import ru.lyaminvalery.supercalc.model.*
+import java.lang.Character.MAX_RADIX
+import java.lang.Character.MIN_RADIX
 
 class CalcViewModel: ViewModel() {
 
@@ -18,7 +20,9 @@ class CalcViewModel: ViewModel() {
     val outputText = mutableStateOf<String>("")
     val isFailed = mutableStateOf<Boolean>(false)
 
-    val addOperationList = mutableStateOf<List<String>>(value = listOf())
+    val radix = mutableStateOf<Int>(10)
+    val isRadixValid = mutableStateOf(true)
+    var result: Double = 0.0
 
     private val DEFAULT_CHARSET = ('1'..'9').toList()
     private val PROGRAMMER_CHARSET = DEFAULT_CHARSET.toMutableList()
@@ -124,6 +128,23 @@ class CalcViewModel: ViewModel() {
         currentPos.value = position
     }
 
+    fun setRadix(radixStr: String){
+        try{
+            val radix = radixStr.toInt()
+            if(radix < MIN_RADIX || radix > MAX_RADIX) {
+                isRadixValid.value = false
+                return
+            }
+            isRadixValid.value = true
+            this.radix.value = radix
+            outputText.value = NumberParser.numberToRadix(result, radix)
+        }
+        catch(e: NumberFormatException){
+            isRadixValid.value = false
+        }
+
+    }
+
     fun changeMode(mode: Mode){
         currentMode.value = mode
 //        val values = Mode.values()
@@ -134,6 +155,9 @@ class CalcViewModel: ViewModel() {
         else{
             numpadButtons.value = PROGRAMMER_CHARSET.map { TextButtonState(it.toString(), this::setText)}
         }
+
+        radix.value = 10
+        isRadixValid.value = true
 
         when(currentMode.value){
             Mode.PLAIN -> {
@@ -170,11 +194,13 @@ class CalcViewModel: ViewModel() {
         isFailed.value = false
     }
 
+
     fun compute(){
         val parser = Parser()
         isFailed.value = false
         try{
-            outputText.value = parser.parse(inputText.value).toString()
+            result = parser.parse(inputText.value)
+            outputText.value = NumberParser.numberToRadix(result, radix.value)
         }
         catch (nf: NumberFormatException){
             outputText.value = "NF: ${nf.message}"

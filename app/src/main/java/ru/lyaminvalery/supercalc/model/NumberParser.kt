@@ -1,5 +1,8 @@
 package ru.lyaminvalery.supercalc.model
+import kotlin.math.absoluteValue
 import kotlin.math.pow
+import kotlin.math.sign
+import kotlin.math.truncate
 
 class NumberParser(){
 
@@ -55,6 +58,39 @@ class NumberParser(){
             }
             return res
         }
+
+        fun numberToRadix(r: Double, radix: Int, digits: Int = 10): String{
+            var intPart = truncate(r.absoluteValue).toInt()
+            var frPart = (r.absoluteValue - intPart)
+
+            val intDigits = mutableListOf<String>()
+            val frDigits = mutableListOf<String>()
+
+            while(intPart > 0){
+                intDigits.add((intPart % radix).toString(radix))
+                intPart = intPart.div(radix)
+            }
+            if(intDigits.size == 0){
+                intDigits.add("0")
+            }
+
+            var counter = 0
+            while(frPart > 0 && counter < digits){
+                val res = frPart * radix
+                frDigits.add(truncate(res).toInt().toString(radix))
+                frPart = res - truncate(res)
+                counter ++
+            }
+            if(frDigits.size == 0){
+                frDigits.add("0")
+            }
+
+            val sign = if (r.sign == -1.0) "-" else ""
+            val intString = intDigits.reversed().joinToString(separator = "") { it }
+            val frString = frDigits.joinToString(separator = "") { it }
+            return "${sign}${intString.uppercase()}.${frString.uppercase()}"
+        }
+
     }
 
 }

@@ -88,6 +88,9 @@ class MainActivity : ComponentActivity() {
             val secondaryColumn = remember { viewModel.secondaryColumn }
             val mainRow = remember { viewModel.primaryRow }
             val additionalRows = remember { viewModel.additionalRows }
+            val isRadixValid = remember {
+                viewModel.isRadixValid
+            }
 
 
             ModeSwitcher(
@@ -103,7 +106,11 @@ class MainActivity : ComponentActivity() {
                     outputText = outputVal.value,
                     hasError = isFailed.value,
                     textPosition = inputPosition.value,
-                    setTextPosition = viewModel::setInputPosition)
+                    setTextPosition = viewModel::setInputPosition,
+                    includeRadix = viewModel.currentMode.value == CalcViewModel.Mode.PROGRAMMER,
+                    radix = viewModel.radix.value,
+                    setRadix = viewModel::setRadix,
+                    isRadixValid = isRadixValid.value)
 
             if(additionalRows.value.isNotEmpty()){
                 for(row in additionalRows.value){

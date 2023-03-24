@@ -45,7 +45,9 @@ fun AppScaffold(themeId: Int = 0,
                     ) {
                         // 6
                         DropdownMenuItem(
-                            onClick = startAboutActivity,
+                            onClick = {
+                                menuExpanded.value = false
+                                startAboutActivity() },
                         ){
                             Text(stringResource(R.string.about))
                         }

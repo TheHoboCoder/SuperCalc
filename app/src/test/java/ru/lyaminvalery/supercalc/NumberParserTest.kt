@@ -65,14 +65,14 @@ class NumberParserTest {
 
     @Test
     fun wrong_format_random_char(){
-        val exception = assertThrows(NumberFormatException::class.java){
+        assertThrows(NumberFormatException::class.java){
             NumberParser.parseString("45Ls")
         }
     }
 
     @Test
     fun wrong_format_fractional(){
-        val exception = assertThrows(NumberFormatException::class.java){
+        assertThrows(NumberFormatException::class.java){
             NumberParser.parseString("45,-2")
         }
     }
@@ -104,6 +104,15 @@ class NumberParserTest {
             NumberParser.parseString("")
         }
         assertEquals("empty number", exception2.message)
+    }
+
+    @Test
+    fun convertRadix(){
+        assertEquals("1111000.1", NumberParser.numberToRadix(120.5, 2))
+        assertEquals("0.5555555555", NumberParser.numberToRadix(1 / 3.0, 16))
+        assertEquals("0.0", NumberParser.numberToRadix(0.0, 8))
+        assertEquals("-320.0", NumberParser.numberToRadix(-120.0, 6))
+        assertEquals("-A.315343A0B6", NumberParser.numberToRadix(-10.26, 12))
     }
 
 }
