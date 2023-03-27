@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import ru.lyaminvalery.supercalc.ui.*
 import ru.lyaminvalery.supercalc.viewmodel.CalcViewModel
@@ -69,6 +70,101 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    @Composable
+    fun ControlPanel(modifier: Modifier,
+                     setText: (String) -> Unit,
+                     doBackspace: () -> Unit,
+                     doClear: () -> Unit,
+                     isPlain: Boolean = true){
+        Row(modifier){
+            if(isPlain){
+
+                CalcButton(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    text = AnnotatedString("%"),
+                    onClick = { setText("%") }
+                )
+
+            }
+            else{
+
+                CalcButton(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    text = AnnotatedString("("),
+                    onClick = { setText("(") }
+                )
+
+                CalcButton(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    text = AnnotatedString(")"),
+                    onClick = { setText(")") }
+                )
+            }
+
+            CalcButton(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                text = AnnotatedString("C"),
+                onClick = doClear,
+                isControl = true
+            )
+
+            CalcButton(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                text = AnnotatedString("⌫"),
+                onClick = doBackspace,
+                isControl = true
+            )
+
+            CalcButton(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                text = AnnotatedString("/"),
+                onClick = { setText(" / ") },
+            )
+
+        }
+    }
+
+    @Composable
+    fun MainOperatorsPanel(modifier: Modifier,
+                           setText: (String) -> Unit,
+                           compute: () -> Unit){
+
+        Column(modifier = modifier){
+
+            for(operator in listOf("*", "+", "-")){
+                CalcButton(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    text = AnnotatedString(operator),
+                    onClick = { setText(operator) })
+            }
+
+            CalcButton(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                text = AnnotatedString("="),
+                onClick = compute,
+                isControl = true
+            )
+
+        }
+
+    }
+
 
     @Composable
     fun MainStack(padding: PaddingValues){
@@ -84,10 +180,6 @@ class MainActivity : ComponentActivity() {
             val numpadButtons = remember { viewModel.numpadButtons }
             val allowedTokens = remember { viewModel.allowedTokens }
 
-            val primaryColumn = remember { viewModel.primaryColumn }
-            val secondaryColumn = remember { viewModel.secondaryColumn }
-            val mainRow = remember { viewModel.primaryRow }
-            val additionalRows = remember { viewModel.additionalRows }
             val isRadixValid = remember {
                 viewModel.isRadixValid
             }
@@ -99,37 +191,51 @@ class MainActivity : ComponentActivity() {
 
 
             val topPaneWeight = if(viewModel.currentMode.value != CalcViewModel.Mode.PLAIN) 3f else 2f
-            TopPane(modifier = Modifier
-                .fillMaxHeight()
-                .weight(topPaneWeight),
-                    inputText = inputVal.value,
-                    outputText = outputVal.value,
-                    hasError = isFailed.value,
-                    textPosition = inputPosition.value,
-                    setTextPosition = viewModel::setInputPosition,
-                    includeRadix = viewModel.currentMode.value == CalcViewModel.Mode.PROGRAMMER,
-                    radix = viewModel.radix.value,
-                    setRadix = viewModel::setRadix,
-                    isRadixValid = isRadixValid.value)
+            TopPane(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(topPaneWeight),
+                inputText = inputVal.value,
+                outputText = outputVal.value,
+                hasError = isFailed.value,
+                textPosition = inputPosition.value,
+                setTextPosition = viewModel::setInputPosition,
+                includeRadix = viewModel.currentMode.value == CalcViewModel.Mode.PROGRAMMER,
+                radix = viewModel.radix.value,
+                setRadix = viewModel::setRadix,
+                isRadixValid = isRadixValid.value
+            )
 
-            if(additionalRows.value.isNotEmpty()){
-                for(row in additionalRows.value){
-                    ButtonRow(modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .weight(1f),
-                        states = row, allowedTokens = allowedTokens.value)
+            if(viewModel.currentMode.value != CalcViewModel.Mode.PLAIN){
+                if(viewModel.currentMode.value == CalcViewModel.Mode.SCIENTIFIC){
+                    ScientificPanel(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        setText = viewModel::setText
+                    )
+                }
+                else{
+                    ProgrammerPanel(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        setText = viewModel::setText
+                    )
                 }
             }
 
-            ButtonRow(
+            ControlPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .weight(1f),
-                states = mainRow.value,
-                allowedTokens = allowedTokens.value
+                setText = viewModel::setText,
+                doBackspace = viewModel::backspace,
+                doClear = viewModel::clear,
+                isPlain = viewModel.currentMode.value == CalcViewModel.Mode.PLAIN
             )
+
 
             Row(modifier = Modifier
                 .fillMaxWidth()
@@ -140,27 +246,46 @@ class MainActivity : ComponentActivity() {
                     .fillMaxHeight()
                     .fillMaxWidth()
 
-                if(secondaryColumn.value.isNotEmpty()){
-                    ButtonColumn(modifier = Modifier
-                        .then(modifier)
-                        .weight(1f),
-                        states = secondaryColumn.value,
-                        allowedTokens = allowedTokens.value)
+                if(viewModel.currentMode.value != CalcViewModel.Mode.PLAIN){
+                    val operators = if(viewModel.currentMode.value ==  CalcViewModel.Mode.SCIENTIFIC)
+                        listOf("%", "^", "√", "!") else listOf(">", "<", "≥", "≤")
+
+                    Column(
+                        modifier = Modifier
+                            .then(modifier)
+                            .weight(1f)
+                    ) {
+
+                        for(operator in operators){
+                            CalcButton(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                text = AnnotatedString(operator) ,
+                                onClick = { viewModel.setText(operator) })
+                        }
+
+                    }
+
                 }
 
-
-                Numpad(modifier = Modifier
-                    .then(modifier)
-                    .weight(3f),
-                    buttons = numpadButtons.value,
+                Numpad(
+                    modifier = Modifier
+                        .then(modifier)
+                        .weight(3f),
+                    numbers = numpadButtons.value,
                     allowedTokens = allowedTokens.value,
-                    setText = viewModel::setText)
+                    setText = viewModel::setText
+                )
 
-                ButtonColumn(modifier = Modifier
-                    .then(modifier)
-                    .weight(1f),
-                    states = primaryColumn.value,
-                    allowedTokens = allowedTokens.value)
+                MainOperatorsPanel(
+                    modifier = Modifier
+                        .then(modifier)
+                        .weight(1f),
+                    setText = viewModel::setText,
+                    compute = viewModel::compute
+                )
+
             }
 
 

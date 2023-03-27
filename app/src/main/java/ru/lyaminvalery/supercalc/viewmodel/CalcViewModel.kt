@@ -24,92 +24,13 @@ class CalcViewModel: ViewModel() {
     val isRadixValid = mutableStateOf(true)
     var result: Double = 0.0
 
-    private val DEFAULT_CHARSET = ('1'..'9').toList()
+    private val DEFAULT_CHARSET = ('1'..'9').map{ it.toString()}.toList()
     private val PROGRAMMER_CHARSET = DEFAULT_CHARSET.toMutableList()
                                                     .apply{
-                                                        addAll(('A' .. 'F'))
+                                                        addAll(('A' .. 'F').map { it.toString() })
                                                     }.toList()
 
-    private val PRIMARY_COLUMN = listOf(
-        TextButtonState("*", this::setText),
-        TextButtonState("-", this::setText),
-        TextButtonState("+", this::setText),
-        ControlButtonState("=", this::compute)
-    )
-
-    private val SECONDARY_COLUMN_SCIENTIFIC = listOf(
-        TextButtonState("%", this::setText),
-        TextButtonState("√", this::setText),
-        TextButtonState("^", this::setText),
-        TextButtonState("...", this::setText, text = " ")
-    )
-
-    private val MAIN_ROW_ONE = listOf(
-        TextButtonState("%", this::setText),
-        ControlButtonState("C", this::clear),
-        ControlButtonState("⌫", this::backspace),
-        TextButtonState("/", this::setText)
-    )
-
-    private val MAIN_ROW_TWO = listOf(
-        TextButtonState("(", this::setText),
-        TextButtonState(")", this::setText),
-        ControlButtonState("C", this::clear),
-        ControlButtonState("⌫", this::backspace),
-        TextButtonState("/", this::setText)
-    )
-
-    private val SECONDARY_COLUMN_PROGRAMMER = listOf(
-        TextButtonState(">", this::setText),
-        TextButtonState("<", this::setText),
-        TextButtonState("≥", this::setText),
-        TextButtonState("≤", this::setText)
-    )
-
-    private val SCIENTIFIC_ROWS = listOf<List<ButtonState>>(
-        listOf(
-            TextButtonState("...", this::setText, text = "sin("),
-            TextButtonState("sin", this::setText, text = "sin("),
-            TextButtonState("cos", this::setText, text = "cos("),
-            TextButtonState("tg", this::setText, text = "tg("),
-            TextButtonState("ctg", this::setText, text = "ctg(")
-        ),
-
-        listOf(
-            TextButtonState("...", this::setText, text = "sin("),
-            TextButtonState("log", this::setText, text = "log("),
-            TextButtonState("ln", this::setText, text = "ln("),
-            TextButtonState("π", this::setText, text = "PI"),
-            TextButtonState("e", this::setText, text = "E")
-        ),
-    )
-
-    private val PROGRAMMER_ROWS = listOf<List<ButtonState>>(
-        listOf(
-            TextButtonState("x2", this::setText, text = "#2:"),
-            TextButtonState("x8", this::setText, text = "#8:"),
-            TextButtonState("x16", this::setText, text = "#16:"),
-            TextButtonState("&", this::setText, text = " & "),
-            TextButtonState("|", this::setText, text = " | "),
-        ),
-
-        listOf(
-            TextButtonState("=", this::setText, text = " = "),
-            TextButtonState("if", this::setText, text = "if("),
-            TextButtonState("min", this::setText, text = "min("),
-            TextButtonState("max", this::setText, text = "max("),
-            TextButtonState("e", this::setText, text = "E")
-        ),
-    )
-
-    val primaryColumn = mutableStateOf(PRIMARY_COLUMN)
-    val primaryRow = mutableStateOf(MAIN_ROW_ONE)
-    val secondaryColumn = mutableStateOf<List<ButtonState>>(listOf())
-    val additionalRows = mutableStateOf<List<List<ButtonState>>>(listOf())
-
-
-    val numpadButtons = mutableStateOf(value =
-                         DEFAULT_CHARSET.map { TextButtonState(it.toString(), this::setText) })
+    val numpadButtons = mutableStateOf(value = DEFAULT_CHARSET)
 
     val allowedTokens = mutableStateOf<List<String>>(value = listOf())
 
@@ -150,32 +71,14 @@ class CalcViewModel: ViewModel() {
 //        val values = Mode.values()
 //        currentMode = values[(currentMode.ordinal + 1) % values.size]
         if (currentMode.value != Mode.PROGRAMMER){
-            numpadButtons.value = DEFAULT_CHARSET.map { TextButtonState(it.toString(), this::setText)}
+            numpadButtons.value = DEFAULT_CHARSET
         }
         else{
-            numpadButtons.value = PROGRAMMER_CHARSET.map { TextButtonState(it.toString(), this::setText)}
+            numpadButtons.value = PROGRAMMER_CHARSET
         }
 
         radix.value = 10
         isRadixValid.value = true
-
-        when(currentMode.value){
-            Mode.PLAIN -> {
-                primaryRow.value = MAIN_ROW_ONE
-                secondaryColumn.value = listOf()
-                additionalRows.value = listOf()
-            }
-            Mode.SCIENTIFIC -> {
-                primaryRow.value = MAIN_ROW_TWO
-                secondaryColumn.value = SECONDARY_COLUMN_SCIENTIFIC
-                additionalRows.value = SCIENTIFIC_ROWS
-            }
-            Mode.PROGRAMMER -> {
-                primaryRow.value = MAIN_ROW_TWO
-                secondaryColumn.value = SECONDARY_COLUMN_PROGRAMMER
-                additionalRows.value = PROGRAMMER_ROWS
-            }
-        }
     }
 
     fun backspace(){

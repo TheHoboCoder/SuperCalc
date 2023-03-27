@@ -41,7 +41,7 @@ val FUNCTIONS = arrayOf<FunctionCalc>(
         override fun compute(args: List<Double>): Double = args[0] / 180 * PI
     },
 
-    object: FunctionCalc("degrees", 1){
+    object: FunctionCalc("deg", 1){
         override fun compute(args: List<Double>): Double = (args[0] * 180) / PI
     },
 
