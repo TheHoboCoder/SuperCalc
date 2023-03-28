@@ -4,6 +4,24 @@
     <string name="mode_plain">Plain</string>
     <string name="mode_scientific">Scientific</string>
     <string name="about">About</string>
+    <string name="about_text">
+        SuperCalc calculator supports three modes of operation: \n
+        - plain \n
+        - scientific \n
+        - programmer \n \n
+
+        In <b>scientific</b> mode, calculation of direct and inverse trigonometric functions is available,
+        logarithms (arbitrary and natural), square root and exponentiation operations are available. \n
+        In addition, you can use the following functions: \n
+        - deg - convert radians to degrees \n
+        - rad - convert degrees to radians \n
+        - min - min of arguments \n
+        - max - max of arguments \n
+        - avg - arithmetic mean of arguments \n
+
+        \n\n
+        The <b>\"programmer\"</b> mode supports number comparison operations,
+        logical operations (&amp;, |, ~),  work with different calculus systems (from 2 to 16)</string>
     <string name="settings_btn_text">Settings</string>
     <string name="app_description_header">App description</string>
     <string name="dev_description_header">Development</string>

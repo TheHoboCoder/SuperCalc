@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +56,9 @@ fun AboutScreen(padding: PaddingValues){
     Column(
         Modifier
             .padding(padding)
-            .padding(8.dp)) {
+            .padding(8.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
         Text(stringResource(id = R.string.app_description_header),
             modifier = Modifier.padding(top=8.dp, bottom = 8.dp),
             fontWeight = FontWeight.Bold,
@@ -67,9 +71,10 @@ fun AboutScreen(padding: PaddingValues){
         Text(stringResource(id = R.string.dev_description))
         Image(painter = painterResource(id = R.drawable.logo_masu),
             contentDescription = stringResource(id = R.string.masu_logo_desc),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
                 .height(200.dp)
-                .padding(top=16.dp, bottom = 8.dp),
+                .padding(top = 16.dp, bottom = 8.dp),
             contentScale = ContentScale.FillHeight)
     }
 }

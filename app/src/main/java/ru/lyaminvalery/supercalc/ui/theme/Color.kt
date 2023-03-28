@@ -11,6 +11,7 @@ val colorLighterGrey = Color(0xFF808080)
 val colorDarkBrown = Color(0xFF352F2F)
 val colorWhite = Color(0xFFFFFFFF)
 
+val colorBlueWhite = Color(0xFFE1E9FF)
 
 val colorDarkBlue = Color(0xFF004878)
 val colorLightBlue = Color(0xFF0093EF)

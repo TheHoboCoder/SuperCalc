@@ -55,13 +55,13 @@ fun ProgrammerPanel(modifier: Modifier,
             CalcButton(
                 modifier = rowModifier,
                 text = AnnotatedString(operator),
-                onClick = { setText(" $operator ") },
+                onClick = { setText(operator) },
             )
         }
 
         DropDown(modifier = rowModifier,
             functions = listOf("min", "max", "avg"),
-            operators = listOf("⊕"),
+            operators = listOf()/*listOf("⊕")*/,
             setText = setText)
 
     }

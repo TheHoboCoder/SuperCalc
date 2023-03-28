@@ -3,7 +3,6 @@ package ru.lyaminvalery.supercalc
 import org.junit.Test
 import ru.lyaminvalery.supercalc.model.Parser
 import org.junit.Assert.*
-import ru.lyaminvalery.supercalc.model.NumberParser
 import ru.lyaminvalery.supercalc.model.ParserException
 import kotlin.math.E
 import kotlin.math.PI
@@ -80,7 +79,24 @@ class ParserTest {
         assertEquals(4.79588, Parser().parse("2 * (4.5 + lg(10 + 5 + sqrt(100))) - log(2 ^ 7, √4 + 2 - 2!) "), 0.00001)
     }
 
+    @Test
+    fun test_trig(){
+        assertEquals(20.0, Parser().parse("deg(arcsin(sin(rad(20)))"), 0.00001)
+    }
 
+    @Test
+    fun test_logical(){
+        assertEquals(1.0, Parser().parse("8 = 16 / 2"), 0.00001)
+        assertEquals(1.0, Parser().parse("8 & (-2)"), 0.00001)
+        assertEquals(0.0, Parser().parse("8 & 0.00000000001"), 0.00001)
+        assertEquals(1.0, Parser().parse("0.00000003 | 0.00000000001"), 0.00001)
+        assertEquals(1.0, Parser().parse("8 & 3+5*(10 - 2)"), 0.00001)
+        assertEquals(0.0, Parser().parse("~7"), 0.00001)
+        assertEquals(1.0, Parser().parse("7 > 6"), 0.00001)
+        assertEquals(1.0, Parser().parse("7 > 6.9999999"), 0.00001)
+        assertEquals(0.0, Parser().parse("7 > 6.9999999999999999"), 0.00001)
+        assertEquals(1.0, Parser().parse("7 ≥ 6.9999999999999999"), 0.00001)
+    }
 
 
 }

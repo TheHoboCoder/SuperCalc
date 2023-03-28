@@ -130,7 +130,7 @@ class MainActivity : ComponentActivity() {
                     .fillMaxWidth()
                     .weight(1f),
                 text = AnnotatedString("/"),
-                onClick = { setText(" / ") },
+                onClick = { setText("/") },
             )
 
         }

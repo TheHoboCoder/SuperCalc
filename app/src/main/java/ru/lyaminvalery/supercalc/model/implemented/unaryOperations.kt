@@ -1,6 +1,7 @@
 package ru.lyaminvalery.supercalc.model.implemented
 
 import ru.lyaminvalery.supercalc.model.UnaryOperation
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.sqrt
 
@@ -8,6 +9,10 @@ val UNARY_OPERATIONS = arrayOf<UnaryOperation>(
 
     object: UnaryOperation('√', prefix = true){
         override fun compute(a: Double): Double = sqrt(a)
+    },
+
+    object: UnaryOperation('~', prefix = true){
+        override fun compute(a: Double): Double = if(abs(a) > EPS) 0.0 else 1.0
     },
 
     object: UnaryOperation('!'){

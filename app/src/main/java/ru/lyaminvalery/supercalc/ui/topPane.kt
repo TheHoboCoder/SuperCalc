@@ -64,7 +64,7 @@ fun TopPane(modifier: Modifier,
                 modifier = Modifier.fillMaxWidth().weight(3f),
                 fontSize = 20.sp,
                 textAlign = TextAlign.End,
-                color = if (!hasError) MaterialTheme.colors.onPrimary else MaterialTheme.colors.onError,
+                color = if (!hasError) MaterialTheme.colors.onSurface else MaterialTheme.colors.onError,
                 )
 
 

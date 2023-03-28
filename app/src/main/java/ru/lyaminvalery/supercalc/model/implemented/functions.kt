@@ -33,8 +33,16 @@ val FUNCTIONS = arrayOf<FunctionCalc>(
         override fun compute(args: List<Double>): Double = tan(args[0])
     },
 
-    object: FunctionCalc("ctg", 1){
-        override fun compute(args: List<Double>): Double = tan(args[0])
+    object: FunctionCalc("arcsin", 1){
+        override fun compute(args: List<Double>): Double = asin(args[0])
+    },
+
+    object: FunctionCalc("arccos", 1){
+        override fun compute(args: List<Double>): Double = acos(args[0])
+    },
+
+    object: FunctionCalc("arctg", 1){
+        override fun compute(args: List<Double>): Double = atan(args[0])
     },
 
     object: FunctionCalc("rad", 1){
@@ -51,6 +59,10 @@ val FUNCTIONS = arrayOf<FunctionCalc>(
 
     object: FunctionCalc("max", -1){
         override fun compute(args: List<Double>): Double = args.max()
+    },
+
+    object: FunctionCalc("avg", -1){
+        override fun compute(args: List<Double>): Double = args.sum() / args.size
     },
 
     object: FunctionCalc("if", 3){
