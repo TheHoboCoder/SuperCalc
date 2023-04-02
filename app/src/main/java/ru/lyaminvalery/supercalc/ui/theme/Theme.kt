@@ -45,6 +45,23 @@ private val ColdDarkColorPalette = darkColors(
     onSurface = colorWhite
 )
 
+private val KidLightColorPalette = lightColors(
+    primary = colorPurple,
+    primaryVariant = colorOrange,
+    secondary = colorLightGreen,
+    onPrimary = colorDarkGreen,
+    onError = colorRed,
+    onSurface = colorPurple
+)
+
+private val KidDarkColorPalette = darkColors(
+    primary = colorPurple,
+    primaryVariant = colorOrange,
+    secondary = colorLightGreen,
+    onPrimary = colorDarkGreen,
+    onError = colorRed,
+    onSurface = colorPurple
+)
 class ThemeHolder(val id: Int,
                   val resId: Int,
                   val lightColors: Colors,
@@ -66,7 +83,8 @@ class ThemeHolder(val id: Int,
 
 val THEMES = arrayOf<ThemeHolder>(
     ThemeHolder(0, R.string.theme_warm, WarmLightColorPalette, WarmDarkColorPalette),
-    ThemeHolder(1, R.string.theme_cold, ColdLightColorPalette, ColdDarkColorPalette)
+    ThemeHolder(1, R.string.theme_cold, ColdLightColorPalette, ColdDarkColorPalette),
+    ThemeHolder(2, R.string.theme_kid, KidLightColorPalette, KidDarkColorPalette)
 ).associateBy { it.id }
 
 @Composable
