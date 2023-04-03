@@ -45,6 +45,7 @@
 
     <string name="theme_warm">Теплая тема</string>
     <string name="theme_cold">Холодная тема</string>
+    <string name="theme_kid">Детская тема</string>
 
     <string name="theme_select">Выбор темы</string>
 
