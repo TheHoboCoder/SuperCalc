@@ -30,6 +30,7 @@
     <string name="settings_text">Settings</string>
     <string name="theme_warm">Warm theme</string>
     <string name="theme_cold">Cold theme</string>
+    <string name="theme_kid">Kid theme</string>
     <string name="theme_select">Theme select</string>
     <!--    <string name="about_text">SuperCalc is calculator which supports three modes ...</string>-->
 </resources>

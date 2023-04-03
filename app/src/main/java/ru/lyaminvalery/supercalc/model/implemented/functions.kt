@@ -9,6 +9,10 @@ val FUNCTIONS = arrayOf<FunctionCalc>(
         override fun compute(args: List<Double>): Double = sqrt(args[0])
     },
 
+    object: FunctionCalc("percent", 1){
+        override fun compute(args: List<Double>): Double = args[0] / 100
+    },
+
     object: FunctionCalc("ln", 1){
         override fun compute(args: List<Double>): Double = ln(args[0])
     },
