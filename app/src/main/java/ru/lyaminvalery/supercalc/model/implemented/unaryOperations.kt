@@ -14,6 +14,10 @@ val UNARY_OPERATIONS = arrayOf<UnaryOperation>(
     object: UnaryOperation('~', prefix = true){
         override fun compute(a: Double): Double = if(abs(a) > EPS) 0.0 else 1.0
     },
+    
+    object: UnaryOperation('%', prefix = true){
+        override fun compute(a: Double): Double = a*0.01
+    },
 
     object: UnaryOperation('!'){
         override fun compute(a: Double): Double {
