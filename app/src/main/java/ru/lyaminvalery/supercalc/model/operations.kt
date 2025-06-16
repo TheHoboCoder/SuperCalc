@@ -1,18 +1,45 @@
 package ru.lyaminvalery.supercalc.model
 
+interface IOperationEval{
+    fun runBinaryOperation(operation: BinaryOperation): Boolean
+    fun runUnaryOperation(operation: UnaryOperation): Boolean
+    fun runFunction(operation: FunctionCalc): Boolean
+}
+
+abstract class Operation{
+    abstract fun runOperation(opEval: IOperationEval): Boolean
+}
+
 abstract class BinaryOperation(val name: Char,
-                      val priority: Int = 0){
+                      val priority: Int = 0): Operation(){
+
+    override fun runOperation(opEval: IOperationEval): Boolean {
+        return opEval.runBinaryOperation(this)
+    }
 
     abstract fun compute(a: Double, b: Double): Double
-    fun hasBiggerPriority(other: BinaryOperation) = priority > other.priority
+    fun hasBiggerPriority(other: Operation): Boolean {
+        if(other !is BinaryOperation){
+            return true
+        }
+        return priority > other.priority
+    }
 }
 
 abstract class UnaryOperation(val name: Char,
-                     val prefix: Boolean = false){
+                     val prefix: Boolean = false): Operation(){
+    override fun runOperation(opEval: IOperationEval): Boolean {
+        return opEval.runUnaryOperation(this)
+    }
     abstract fun compute(a: Double): Double
 }
 
-abstract class FunctionCalc(val name: String, val argsCount: Int = -1){
+abstract class FunctionCalc(val name: String, val argsCount: Int = -1): Operation(){
+
+    override fun runOperation(opEval: IOperationEval): Boolean {
+        return opEval.runFunction(this)
+    }
+
     abstract fun compute(args: List<Double>): Double
 
     fun run(args: List<Double>): Double{
@@ -38,8 +65,3 @@ abstract class FunctionScope(val start: Char, val end: Char){
 //            ?: throw ParserException("unexpected char $char")
 //    }
 //}
-
-class Token(var tokenType: Parser.Companion.TokenType,
-            var start: Int,
-            var end: Int,
-            var hasError: Boolean = false)

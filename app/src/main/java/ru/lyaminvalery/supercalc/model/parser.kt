@@ -4,283 +4,214 @@ import ru.lyaminvalery.supercalc.model.implemented.BINARY_OPERATIONS
 import ru.lyaminvalery.supercalc.model.implemented.CONSTANTS
 import ru.lyaminvalery.supercalc.model.implemented.FUNCTIONS
 import ru.lyaminvalery.supercalc.model.implemented.UNARY_OPERATIONS
+import java.lang.Character.MAX_RADIX
+import java.lang.Character.MIN_RADIX
 
 class ParserException(message: String) : Exception(message)
 
+class Frame(val function: FunctionCalc? = null){
 
-class Parser{
-
-    companion object {
-
-
-        enum class TokenType{
-            INITIAL,
-            NUMBER_OPERAND,
-            NUMBER_RADIX,
-            SEPARATOR,
-            BINARY_OPERATION,
-            UNARY_OPERATION,
-            BRACE_OPEN,
-            BRACE_CLOSE,
-            RADIX_SPECIFICATION_START,
-            RADIX_SPECIFICATION_END,
-            IDENTIFIER,
-        }
-
-        fun isAllowed(previousToken: TokenType, currentToken: TokenType): Boolean{
-            val defaultList = arrayOf(TokenType.NUMBER_OPERAND,
-                                        TokenType.BRACE_OPEN,
-                                        TokenType.RADIX_SPECIFICATION_START,
-                                        TokenType.UNARY_OPERATION,
-                                        TokenType.IDENTIFIER)
-            when(previousToken){
-
-                TokenType.INITIAL, TokenType.BINARY_OPERATION, TokenType.BRACE_OPEN, TokenType.SEPARATOR
-                                                -> return currentToken in defaultList
-
-                TokenType.BRACE_CLOSE -> return currentToken in arrayOf(TokenType.BRACE_CLOSE, TokenType.BINARY_OPERATION, TokenType.SEPARATOR)
-
-                TokenType.NUMBER_OPERAND, TokenType.IDENTIFIER -> return currentToken in arrayOf(TokenType.BINARY_OPERATION,
-                                                                                           TokenType.UNARY_OPERATION,
-                                                                                           TokenType.BRACE_OPEN,
-                                                                                           TokenType.BRACE_CLOSE,
-                                                                                            TokenType.SEPARATOR)
-                TokenType.UNARY_OPERATION  -> return currentToken in defaultList ||
-                                                     currentToken in arrayOf(TokenType.BINARY_OPERATION, TokenType.BRACE_CLOSE, TokenType.SEPARATOR)
-
-                TokenType.RADIX_SPECIFICATION_START -> return currentToken == TokenType.NUMBER_RADIX
-
-                TokenType.NUMBER_RADIX -> return currentToken in arrayOf(TokenType.RADIX_SPECIFICATION_END, TokenType.NUMBER_RADIX)
-
-                TokenType.RADIX_SPECIFICATION_END -> return currentToken == TokenType.NUMBER_OPERAND
-
-            }
-        }
-
-
-       fun getTokenForChar(char: Char, previousToken: TokenType, radix: Int = 10): TokenType{
-
-            if(previousToken != TokenType.RADIX_SPECIFICATION_START &&
-                previousToken != TokenType.NUMBER_RADIX &&
-                NumberParser.isCharAllowed(char,
-                    separator = '.',
-                    initial=(previousToken==TokenType.INITIAL),
-                    radix=radix)){
-                return TokenType.NUMBER_OPERAND
-            }
-            else if(NumberParser.isCharAllowed(char, int=true, unsigned=true) ){
-                return TokenType.NUMBER_RADIX
-            }
-            else if(char.uppercaseChar() == '#'){
-                return TokenType.RADIX_SPECIFICATION_START
-            }
-            else if(char in BINARY_OPERATIONS){
-                return TokenType.BINARY_OPERATION
-            }
-            else if(char in UNARY_OPERATIONS){
-                return TokenType.UNARY_OPERATION
-            }
-            else if(char == ':'){
-                return TokenType.RADIX_SPECIFICATION_END
-            }
-            else if(char == '('){
-                return TokenType.BRACE_OPEN
-            }
-            else if(char == ')'){
-                return TokenType.BRACE_CLOSE
-            }
-            else if(char.isLetter()){
-                return TokenType.IDENTIFIER
-            }
-            else if(char == ','){
-                return TokenType.SEPARATOR
-            }
-            else{
-                throw ParserException("Unknown token")
-            }
-       }
-
-
-    }
-
-    private var previousTokenType: TokenType = TokenType.INITIAL
-    private var _unaryOperation: UnaryOperation? = null
-    private var _function: FunctionCalc? = null
-    private var _radix: Int = 10
-
-    private val _tokenList = mutableListOf<Token>()
-    private val _operationStack = ArrayDeque<BinaryOperation>()
     private val _numberStack = ArrayDeque<Double>()
-    private val _stringBuffer = StringBuilder()
-    private var _index: Int = 0
+    private var _stackTop = 0
+    private val _operationStack = ArrayDeque<BinaryOperation>()
+    private var _unaryOperation: UnaryOperation? = null
 
-    private val index: Int
-        get() = _index
-
-    private fun collapse(){
-        while (_operationStack.size != 0) {
-            if(_numberStack.size < 2){
+     fun collapse(){
+        while(_numberStack.size - 1 > _stackTop &&
+            _operationStack.size > 0){
+            if(_numberStack.size - 1 - _stackTop <= 1)
                 throw ParserException("invalid input")
-            }
-            val prev = _operationStack.removeLast()
-            val b = _numberStack.removeLast()
-            val a = _numberStack.removeLast()
-            _numberStack.addLast(prev.compute(a, b))
+            val operation = _operationStack.removeLast()
+            val operandB = _numberStack.removeLast()
+            val operandA = _numberStack.removeLast()
+            _numberStack.addLast(operation.compute(operandA, operandB))
         }
     }
 
-    private fun collapseResult(): List<Double>{
-
-        if(previousTokenType == TokenType.NUMBER_OPERAND){
-            parseNumber()
-        }
-        if(_unaryOperation != null){
-            _numberStack.addLast(_unaryOperation!!.compute(_numberStack.removeLast()))
-        }
-        if (_numberStack.size == 0){
-            return listOf(0.0)
-        }
+    fun separate(){
+        runUnaryOperation()
         collapse()
-        return _numberStack
-
+        _stackTop++
     }
 
-    private fun doBinaryOperation(operation: BinaryOperation){
+    fun addNumber(number: Double){
+        _numberStack.addLast(number)
+    }
+
+    fun addBinaryOperation(binaryOperation: BinaryOperation){
+        runUnaryOperation()
         if (_operationStack.size > 0 &&
-            !operation.hasBiggerPriority( _operationStack.last())){
+            !binaryOperation.hasBiggerPriority(_operationStack.last())){
             collapse()
         }
-        _operationStack.addLast(operation)
+
+        _operationStack.addLast(binaryOperation)
     }
 
-    private fun doUnaryOperation(operation: UnaryOperation){
-        if(operation.prefix){
-            _unaryOperation = operation
-        }
-        else{
-            _numberStack.addLast(operation.compute(_numberStack.removeLast()))
+    fun addUnaryOperation(unaryOperation: UnaryOperation){
+        _unaryOperation = unaryOperation
+
+        if(!unaryOperation.prefix){
+            runUnaryOperation()
         }
     }
 
-    private fun parseNumber(){
-        val number = NumberParser.parseString(_stringBuffer.toString(),
-            radix=_radix, separator='.')
-
-        _radix = 10
-
+    private fun runUnaryOperation() {
         if(_unaryOperation != null){
-            _numberStack.addLast(_unaryOperation!!.compute(number))
+
+            if(_numberStack.size - 1 - _stackTop == 0)
+                throw ParserException("invalid input")
+
+            _numberStack.addLast(_unaryOperation!!.compute(_numberStack.removeLast()))
+
             _unaryOperation = null
         }
+    }
+
+    fun calculateAll(): Double {
+        runUnaryOperation()
+        collapse()
+        return function?.compute(_numberStack) ?: _numberStack.last()
+    }
+
+
+}
+
+
+class Parser: ITokenCollector {
+
+    val binaryOperations = BINARY_OPERATIONS.toMutableMap()
+    val unaryOperations = UNARY_OPERATIONS.toMutableMap()
+    val functions = FUNCTIONS.toMutableMap()
+    val variables = mutableMapOf<String, Double>()
+    val constants = CONSTANTS.toMutableMap()
+
+    private val frames = ArrayDeque<Frame>()
+
+    private var _radix = 10
+    private var source: String = ""
+    private var currentPos: Int = -1
+
+
+    fun eval(tokens: List<Token>, str: String): Double{
+        frames.clear()
+        frames.addLast(Frame())
+        source = str
+        var prevToken: Token? = null
+        for(token in tokens){
+            if (token.hasError){
+                return 0.0
+            }
+            token.collect(currentPos, this, prevToken)
+            currentPos++
+            prevToken = token
+        }
+        return frames.last().calculateAll()
+    }
+
+
+    private fun insertMultiplication(previousToken: Token?){
+        if(previousToken is NumberToken ||
+           previousToken is CloseBraceToken ||
+           previousToken is UnaryToken){
+            frames.last().addBinaryOperation(binaryOperations['*']!!)
+        }
+    }
+
+
+    override fun collectNumberToken(position: Int, numberToken: NumberToken, prevToken: Token?) {
+        try{
+            val subst = numberToken.extract(source)
+            frames.last().addNumber(NumberParser.parseString(subst, radix = _radix, separator = '.'))
+            _radix = 10
+            numberToken.hasError = false
+        }
+        catch(e: NumberFormatException){
+            numberToken.hasError = true
+            throw ParserException("invalid format")
+        }
+    }
+
+    override fun collectRadixToken(position: Int, radixToken: RadixToken, prevToken: Token?) {
+        try{
+            val subst = radixToken.extract(source)
+            val radix = NumberParser.parseString(subst, unsigned = true, int = true).toInt()
+            if(radix < MIN_RADIX || radix > MAX_RADIX){
+                radixToken.hasError = true
+                throw ParserException("invalid radix")
+            }
+            radixToken.hasError = false
+            _radix = radix
+        }
+        catch(e: NumberFormatException){
+            radixToken.hasError = true
+            throw ParserException("invalid format")
+        }
+    }
+
+
+    override fun collectBinaryToken(position: Int, binaryToken: BinaryToken, prevToken: Token?) {
+        val subst = binaryToken.extract(source)
+        if(!binaryOperations.containsKey(subst[0])){
+            binaryToken.hasError = true
+            throw ParserException("unknown token")
+        }
+        val operation: BinaryOperation = binaryOperations[subst[0]]!!
+        binaryToken.hasError = false
+
+        frames.last().addBinaryOperation(operation)
+    }
+
+    override fun collectUnaryToken(position: Int, unaryToken: UnaryToken, prevToken: Token?) {
+        val subst = unaryToken.extract(source)
+        if(!unaryOperations.containsKey(subst[0])){
+            unaryToken.hasError = true
+            throw ParserException("unknown token")
+        }
+        insertMultiplication(prevToken)
+        frames.last().addUnaryOperation(unaryOperations[subst[0]]!!)
+    }
+
+    override fun collectIdentifier(
+        position: Int,
+        identifierToken: IdentifierToken,
+        prevToken: Token?
+    ) {
+        val subst = identifierToken.extract(source)
+        identifierToken.hasError = false
+        if(subst.lowercase() in functions){
+            frames.addLast(Frame(functions[subst.lowercase()]!!))
+        }
+        else if(subst.uppercase() in constants){
+            frames.last().addNumber(constants[subst.uppercase()]!!)
+        }
+        else if(variables.containsKey(subst)){
+            frames.last().addNumber(variables[subst]!!)
+        }
         else{
-            _numberStack.addLast(number)
+            identifierToken.hasError = true
+            throw ParserException("unknown identifier: $subst")
         }
     }
 
-    private fun evaluateToken(tokenType: TokenType){
-        when(tokenType){
+    override fun collectSeparator(position: Int, prevToken: Token?) {
+        frames.last().separate()
+    }
 
-            TokenType.NUMBER_OPERAND -> {
-                parseNumber()
-            }
-
-            TokenType.NUMBER_RADIX -> {
-                _radix = NumberParser.parseString(_stringBuffer.toString(), int=true, unsigned=true).toInt()
-            }
-
-            TokenType.BINARY_OPERATION -> {
-                doBinaryOperation(BINARY_OPERATIONS[_stringBuffer[0]]!!)
-            }
-
-            TokenType.UNARY_OPERATION -> {
-                doUnaryOperation(UNARY_OPERATIONS[_stringBuffer[0]]!!)
-            }
-
-            TokenType.IDENTIFIER -> {
-                if(_stringBuffer.toString().uppercase() in CONSTANTS){
-                    _numberStack.addLast(CONSTANTS[_stringBuffer.toString().uppercase()]!!)
-                }
-                if(_stringBuffer.toString().lowercase() in FUNCTIONS){
-                    _function = FUNCTIONS[_stringBuffer.toString().lowercase()]
-                }
-            }
-
-            else -> {}
+    override fun collectOpenBrace(position: Int, prevToken: Token?) {
+        if(frames.last().function == null){
+            insertMultiplication(prevToken)
+            frames.addLast(Frame())
         }
     }
 
-    private fun parseRes(input: String, start: Int = 0): List<Double>{
-        _index = start
-        previousTokenType = TokenType.INITIAL
-        while(_index < input.length){
-
-            val char = input[index]
-            if (char == ' '){
-                _index++
-                continue
-            }
-
-            val tokenType = getTokenForChar(char, previousTokenType, _radix)
-            if(tokenType !in listOf(TokenType.NUMBER_OPERAND, TokenType.NUMBER_RADIX, TokenType.IDENTIFIER)
-                || tokenType != previousTokenType){
-                if(!isAllowed(previousTokenType, tokenType)){
-                    throw ParserException("$_index: $char is not allowed here")
-                }
-                evaluateToken(previousTokenType)
-                _stringBuffer.clear()
-                if(_function != null && tokenType != TokenType.BRACE_OPEN){
-                    throw ParserException("function must be called with braces")
-                }
-                _tokenList.add(Token(tokenType, index, index ))
-            }
-            // _tokenList.last().end ++
-            _stringBuffer.append(char)
-
-            // TODO:
-//            if(tokenType == TokenType.UNARY_OPERATION && previousTokenType == TokenType.NUMBER_OPERAND){
-//                _operationStack.add(BINARY_OPERATIONS['*']!!)
-//            }
-
-            if(tokenType == TokenType.BRACE_OPEN){
-                if(previousTokenType == TokenType.NUMBER_OPERAND /* ||
-                    (previousTokenType == TokenType.UNARY_OPERATION && !_unaryOperation!!.prefix)*/){
-                    _operationStack.add(BINARY_OPERATIONS['*']!!)
-                }
-
-                val parser = Parser()
-                if(_function == null){
-                    _numberStack.addLast(parser.parse(input, _index + 1))
-                }
-                else{
-                    _numberStack.addLast(_function!!.run(parser.parseRes(input, _index + 1)))
-                    _function = null
-                }
-
-                _index = parser.index + 1
-                previousTokenType = TokenType.BRACE_CLOSE
-                continue
-            }
-
-
-            previousTokenType = tokenType
-            if(tokenType == TokenType.BRACE_CLOSE){
-                return collapseResult()
-            }
-            if(tokenType == TokenType.SEPARATOR){
-                collapseResult()
-                previousTokenType = TokenType.INITIAL
-            }
-
-            _index++
+    override fun collectCloseBrace(position: Int, prevToken: Token?) {
+        val prevFrame = frames.removeLast()
+        if(frames.size == 0){
+            throw ParserException("unmatched braces")
         }
-
-
-        return collapseResult()
+        frames.last().addNumber(prevFrame.calculateAll())
     }
 
-
-    fun parse(input: String, start: Int = 0): Double{
-        return parseRes(input, start).last()
-    }
-
+    override fun collectSpecial() {}
 }

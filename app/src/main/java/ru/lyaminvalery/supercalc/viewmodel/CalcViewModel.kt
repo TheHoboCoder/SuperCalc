@@ -100,9 +100,10 @@ class CalcViewModel: ViewModel() {
 
     fun compute(){
         val parser = Parser()
+        val tokenizer = Tokenizer()
         isFailed.value = false
         try{
-            result = parser.parse(inputText.value)
+            result = parser.eval(tokenizer.tokenize(inputText.value), inputText.value)
             outputText.value = NumberParser.numberToRadix(result, radix.value)
         }
         catch (nf: NumberFormatException){
