@@ -71,7 +71,24 @@ val FUNCTIONS = arrayOf<FunctionCalc>(
 
     object: FunctionCalc("if", 3){
         override fun compute(args: List<Double>): Double = if(abs(args[0] -1) <= 0.000001) args[1] else args[2]
-    }
+    },
 
+    object: FunctionCalc("√", 1){
+        override fun compute(args: List<Double>): Double = sqrt(args[0])
+    },
+
+    object: FunctionCalc("~", 1){
+        override fun compute(args: List<Double>): Double = if(abs(args[0]) > EPS) 0.0 else 1.0
+    },
+
+    object: FunctionCalc("!", 1, postfix=true){
+        override fun compute(args: List<Double>): Double {
+            val a = args[0]
+            val eps = 0.00000000001
+            if(a < 0.0 || a - floor(a) > eps)
+                throw IllegalArgumentException("$a cannot be factorized!")
+            return if (a < eps) 1.0 else (1..a.toLong()).reduce{ x, y -> x*y }.toDouble()
+        }
+    },
 
 ).associateBy { it.name }

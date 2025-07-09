@@ -3,24 +3,24 @@ package ru.lyaminvalery.supercalc.model
 import ru.lyaminvalery.supercalc.model.implemented.BINARY_OPERATIONS
 import ru.lyaminvalery.supercalc.model.implemented.CONSTANTS
 import ru.lyaminvalery.supercalc.model.implemented.FUNCTIONS
-import ru.lyaminvalery.supercalc.model.implemented.UNARY_OPERATIONS
 import java.lang.Character.MAX_RADIX
 import java.lang.Character.MIN_RADIX
 
 class ParserException(message: String) : Exception(message)
 
-class Frame(val function: FunctionCalc? = null){
+class Frame(val function: FunctionCalc? = null, var parent: Frame? = null){
 
     private val _numberStack = ArrayDeque<Double>()
-    private var _stackTop = 0
     private val _operationStack = ArrayDeque<BinaryOperation>()
-    private var _unaryOperation: UnaryOperation? = null
 
-     fun collapse(){
-        while(_numberStack.size - 1 > _stackTop &&
-            _operationStack.size > 0){
-            if(_numberStack.size - 1 - _stackTop <= 1)
-                throw ParserException("invalid input")
+    fun hasParent() = parent != null
+    fun parentFunction() = parent?.function
+
+    fun collapse(){
+        if(_operationStack.isNotEmpty() && _numberStack.size - _operationStack.size != 1){
+            throw ParserException("invalid stack")
+        }
+        while(_operationStack.isNotEmpty()){
             val operation = _operationStack.removeLast()
             val operandB = _numberStack.removeLast()
             val operandA = _numberStack.removeLast()
@@ -28,10 +28,39 @@ class Frame(val function: FunctionCalc? = null){
         }
     }
 
-    fun separate(){
-        runUnaryOperation()
+    fun runFunction() {
+        function?.let{
+            // TODO: if args = -1, grab everything
+            if(_numberStack.size > 1 && _numberStack.size != it.argsCount){
+                throw ParserException(
+                    "${it.name}: argument count doesn't match: expected ${it.argsCount}, got ${_numberStack.size}"
+                )
+            }
+            // frame contains either function or binary operators
+            _numberStack.addLast(it.compute(_numberStack))
+        }
+    }
+
+    fun calculateAll(): Double {
+        runFunction()
         collapse()
-        _stackTop++
+        return _numberStack.last()
+    }
+
+    fun dive(function: FunctionCalc? = null): Frame{
+        val frame = Frame(function, this)
+        // if function is postfix, we should push last number to it
+        if(function?.postfix == true){
+            frame.addNumber(_numberStack.last())
+        }
+        return frame
+    }
+
+    fun rise(): Frame{
+        val result = calculateAll()
+        return parent?.apply {
+            addNumber(result)
+        } ?: this
     }
 
     fun addNumber(number: Double){
@@ -39,8 +68,10 @@ class Frame(val function: FunctionCalc? = null){
     }
 
     fun addBinaryOperation(binaryOperation: BinaryOperation){
-        runUnaryOperation()
-        if (_operationStack.size > 0 &&
+        if(function != null){
+            throw ParserException("binary operators is not allowed in function scope")
+        }
+        if (_operationStack.isNotEmpty() &&
             !binaryOperation.hasBiggerPriority(_operationStack.last())){
             collapse()
         }
@@ -48,45 +79,12 @@ class Frame(val function: FunctionCalc? = null){
         _operationStack.addLast(binaryOperation)
     }
 
-    fun addUnaryOperation(unaryOperation: UnaryOperation){
-        _unaryOperation = unaryOperation
-
-        if(!unaryOperation.prefix){
-            runUnaryOperation()
-        }
-    }
-
-    private fun runUnaryOperation() {
-        if(_unaryOperation != null){
-
-            if(_numberStack.size - 1 - _stackTop == 0)
-                throw ParserException("invalid input")
-
-            _numberStack.addLast(_unaryOperation!!.compute(_numberStack.removeLast()))
-
-            _unaryOperation = null
-        }
-    }
-
-    fun calculateAll(): Double {
-        runUnaryOperation()
-        collapse()
-        return function?.compute(_numberStack) ?: _numberStack.last()
-    }
-
-
 }
 
 
-class Parser: ITokenCollector {
+class Parser(val calculatorContext: CalculatorContext): ITokenCollector {
 
-    val binaryOperations = BINARY_OPERATIONS.toMutableMap()
-    val unaryOperations = UNARY_OPERATIONS.toMutableMap()
-    val functions = FUNCTIONS.toMutableMap()
-    val variables = mutableMapOf<String, Double>()
-    val constants = CONSTANTS.toMutableMap()
-
-    private val frames = ArrayDeque<Frame>()
+    private var frameTop = Frame()
 
     private var _radix = 10
     private var source: String = ""
@@ -94,8 +92,7 @@ class Parser: ITokenCollector {
 
 
     fun eval(tokens: List<Token>, str: String): Double{
-        frames.clear()
-        frames.addLast(Frame())
+        frameTop = Frame()
         source = str
         var prevToken: Token? = null
         for(token in tokens){
@@ -106,70 +103,38 @@ class Parser: ITokenCollector {
             currentPos++
             prevToken = token
         }
-        return frames.last().calculateAll()
+        return frameTop.calculateAll()
     }
 
 
     private fun insertMultiplication(previousToken: Token?){
+        // TODO: functions
         if(previousToken is NumberToken ||
-           previousToken is CloseBraceToken ||
-           previousToken is UnaryToken){
-            frames.last().addBinaryOperation(binaryOperations['*']!!)
+           previousToken is CloseBraceToken){
+            frameTop.addBinaryOperation(calculatorContext.binaryOperations["*"]!!)
         }
     }
 
 
     override fun collectNumberToken(position: Int, numberToken: NumberToken, prevToken: Token?) {
-        try{
-            val subst = numberToken.extract(source)
-            frames.last().addNumber(NumberParser.parseString(subst, radix = _radix, separator = '.'))
-            _radix = 10
-            numberToken.hasError = false
+        // if there's function, dive
+        if(frameTop.function != null){
+            frameTop = frameTop.dive()
         }
-        catch(e: NumberFormatException){
-            numberToken.hasError = true
-            throw ParserException("invalid format")
-        }
+        frameTop.addNumber(numberToken.parse(source, calculatorContext, _radix))
     }
 
     override fun collectRadixToken(position: Int, radixToken: RadixToken, prevToken: Token?) {
-        try{
-            val subst = radixToken.extract(source)
-            val radix = NumberParser.parseString(subst, unsigned = true, int = true).toInt()
-            if(radix < MIN_RADIX || radix > MAX_RADIX){
-                radixToken.hasError = true
-                throw ParserException("invalid radix")
-            }
-            radixToken.hasError = false
-            _radix = radix
-        }
-        catch(e: NumberFormatException){
-            radixToken.hasError = true
-            throw ParserException("invalid format")
-        }
+        _radix = radixToken.parse(source, calculatorContext, _radix)
     }
-
 
     override fun collectBinaryToken(position: Int, binaryToken: BinaryToken, prevToken: Token?) {
-        val subst = binaryToken.extract(source)
-        if(!binaryOperations.containsKey(subst[0])){
-            binaryToken.hasError = true
-            throw ParserException("unknown token")
+        val binaryOperation = binaryToken.parse(source, calculatorContext, _radix)
+        // if there's function, we should execute it first
+        if(frameTop.function != null || frameTop.parentFunction()?.argsCount == 1){
+            frameTop = frameTop.rise()
         }
-        val operation: BinaryOperation = binaryOperations[subst[0]]!!
-        binaryToken.hasError = false
-
-        frames.last().addBinaryOperation(operation)
-    }
-
-    override fun collectUnaryToken(position: Int, unaryToken: UnaryToken, prevToken: Token?) {
-        val subst = unaryToken.extract(source)
-        if(!unaryOperations.containsKey(subst[0])){
-            unaryToken.hasError = true
-            throw ParserException("unknown token")
-        }
-        insertMultiplication(prevToken)
-        frames.last().addUnaryOperation(unaryOperations[subst[0]]!!)
+        frameTop.addBinaryOperation(binaryOperation)
     }
 
     override fun collectIdentifier(
@@ -177,40 +142,43 @@ class Parser: ITokenCollector {
         identifierToken: IdentifierToken,
         prevToken: Token?
     ) {
-        val subst = identifierToken.extract(source)
-        identifierToken.hasError = false
-        if(subst.lowercase() in functions){
-            frames.addLast(Frame(functions[subst.lowercase()]!!))
-        }
-        else if(subst.uppercase() in constants){
-            frames.last().addNumber(constants[subst.uppercase()]!!)
-        }
-        else if(variables.containsKey(subst)){
-            frames.last().addNumber(variables[subst]!!)
-        }
-        else{
-            identifierToken.hasError = true
-            throw ParserException("unknown identifier: $subst")
-        }
+//        val subst = identifierToken.extract(source)
+//        identifierToken.hasError = false
+//        if(subst.lowercase() in functions){
+//            frames.addLast(Frame(functions[subst.lowercase()]!!))
+//        }
+//        else if(subst.uppercase() in constants){
+//            frames.last().addNumber(constants[subst.uppercase()]!!)
+//        }
+//        else if(variables.containsKey(subst)){
+//            frames.last().addNumber(variables[subst]!!)
+//        }
+//        else{
+//            identifierToken.hasError = true
+//            throw ParserException("unknown identifier: $subst")
+//        }
     }
 
     override fun collectSeparator(position: Int, prevToken: Token?) {
-        frames.last().separate()
+        if(frameTop.parentFunction() == null){
+            throw ParserException(", is not allowed here")
+        }
+        // collect operand for function
+        frameTop = frameTop.rise()
+        // and dive again for next
+        frameTop = frameTop.dive()
     }
 
     override fun collectOpenBrace(position: Int, prevToken: Token?) {
-        if(frames.last().function == null){
-            insertMultiplication(prevToken)
-            frames.addLast(Frame())
-        }
+        insertMultiplication(prevToken)
+        frameTop = frameTop.dive()
     }
 
     override fun collectCloseBrace(position: Int, prevToken: Token?) {
-        val prevFrame = frames.removeLast()
-        if(frames.size == 0){
+        if(!frameTop.hasParent()){
             throw ParserException("unmatched braces")
         }
-        frames.last().addNumber(prevFrame.calculateAll())
+        frameTop = frameTop.rise()
     }
 
     override fun collectSpecial() {}

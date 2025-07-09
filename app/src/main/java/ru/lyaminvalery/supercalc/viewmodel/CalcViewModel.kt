@@ -99,20 +99,21 @@ class CalcViewModel: ViewModel() {
 
 
     fun compute(){
-        val parser = Parser()
-        val tokenizer = Tokenizer()
-        isFailed.value = false
-        try{
-            result = parser.eval(tokenizer.tokenize(inputText.value), inputText.value)
-            outputText.value = NumberParser.numberToRadix(result, radix.value)
-        }
-        catch (nf: NumberFormatException){
-            outputText.value = "NF: ${nf.message}"
-            isFailed.value = false
-        }
-        catch (pe: ParserException){
-            outputText.value = "PE: ${pe.message}"
-            isFailed.value = false
-        }
+
+//        val parser = Parser()
+//        val tokenizer = Tokenizer()
+//        isFailed.value = false
+//        try{
+//            result = parser.eval(tokenizer.tokenize(inputText.value), inputText.value)
+//            outputText.value = NumberParser.numberToRadix(result, radix.value)
+//        }
+//        catch (nf: NumberFormatException){
+//            outputText.value = "NF: ${nf.message}"
+//            isFailed.value = false
+//        }
+//        catch (pe: ParserException){
+//            outputText.value = "PE: ${pe.message}"
+//            isFailed.value = false
+//        }
     }
 }

@@ -2,7 +2,6 @@ package ru.lyaminvalery.supercalc.model.implemented
 
 import ru.lyaminvalery.supercalc.model.BinaryOperation
 import ru.lyaminvalery.supercalc.model.ParserException
-import ru.lyaminvalery.supercalc.model.UnaryOperation
 import kotlin.math.abs
 import kotlin.math.pow
 
